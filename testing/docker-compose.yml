@@ -20,7 +20,7 @@ services:
     expose:
       - "9000"
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9000/fortunes/1"]
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9000/healthz"]
       interval: 3s
       timeout: 3s
       retries: 10
