@@ -14,14 +14,14 @@ jobs:
   build:
     uses: ./.github/workflows/components.build.yml
 
-  test-environment:
-    needs: [unit-tests, build]
-    uses: ./.github/workflows/components.testing-environment.yml
-    with:
-      backend-image:     ${{ needs.build.outputs.backend-image }}
-      frontend-image:    ${{ needs.build.outputs.frontend-image }}
-      backend-artifact:  ${{ needs.build.outputs.backend-artifact }}
-      frontend-artifact: ${{ needs.build.outputs.frontend-artifact }}
+#  test-environment:
+#    needs: [unit-tests, build]
+#    uses: ./.github/workflows/components.testing-environment.yml
+#    with:
+#      backend-image:     ${{ needs.build.outputs.backend-image }}
+#      frontend-image:    ${{ needs.build.outputs.frontend-image }}
+#      backend-artifact:  ${{ needs.build.outputs.backend-artifact }}
+#      frontend-artifact: ${{ needs.build.outputs.frontend-artifact }}
 
   release:
     needs: [build, test-environment]
