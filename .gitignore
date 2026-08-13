@@ -3,3 +3,6 @@ backend/backend
 
 # frontend binary
 frontend/frontend
+
+rasterize.ps1
+*.rasterized.txt
