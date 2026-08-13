@@ -26,7 +26,7 @@ jobs:
       frontend-artifact: ${{ needs.build.outputs.frontend-artifact }}
 
   release:
-    needs: [build, test-environtment]
+    needs: [build, test-environment]
     uses: ./.github/workflows/components.release.yml
     with:
       backend-artifact: ${{ needs.build.outputs.backend-artifact }}
