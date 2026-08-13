@@ -7,6 +7,11 @@ on:
         description: "Docker Hub account to publish under"
         type: string
         required: true
+      repository:
+        description: "Docker Hub repository name (without the username)"
+        type: string
+        required: false
+        default: sdu-s10-cicd-fortuna
       backend-artifact:
         description: "Artifact name holding the backend image tarball"
         type: string
@@ -32,6 +37,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      REPO: ${{ inputs.dockerhub-username }}/${{ inputs.repository }}
     steps:
       - name: Download backend image
         uses: actions/download-artifact@v4
@@ -60,15 +67,15 @@ jobs:
       - name: Tag and push backend
         run: |
           src=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^fortuna-backend:' | head -n1)
-          docker tag "$src" "${{ inputs.dockerhub-username }}/fortuna-backend:${{ inputs.version }}"
-          docker tag "$src" "${{ inputs.dockerhub-username }}/fortuna-backend:latest"
-          docker push "${{ inputs.dockerhub-username }}/fortuna-backend:${{ inputs.version }}"
-          docker push "${{ inputs.dockerhub-username }}/fortuna-backend:latest"
+          docker tag "$src" "${REPO}:backend-${{ inputs.version }}"
+          docker tag "$src" "${REPO}:backend-latest"
+          docker push "${REPO}:backend-${{ inputs.version }}"
+          docker push "${REPO}:backend-latest"
 
       - name: Tag and push frontend
         run: |
           src=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^fortuna-frontend:' | head -n1)
-          docker tag "$src" "${{ inputs.dockerhub-username }}/fortuna-frontend:${{ inputs.version }}"
-          docker tag "$src" "${{ inputs.dockerhub-username }}/fortuna-frontend:latest"
-          docker push "${{ inputs.dockerhub-username }}/fortuna-frontend:${{ inputs.version }}"
-          docker push "${{ inputs.dockerhub-username }}/fortuna-frontend:latest"
+          docker tag "$src" "${REPO}:frontend-${{ inputs.version }}"
+          docker tag "$src" "${REPO}:frontend-latest"
+          docker push "${REPO}:frontend-${{ inputs.version }}"
+          docker push "${REPO}:frontend-latest"
