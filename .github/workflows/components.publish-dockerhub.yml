@@ -1,0 +1,74 @@
+name: Publish to Docker Hub
+
+on:
+  workflow_call:
+    inputs:
+      dockerhub-username:
+        description: "Docker Hub account to publish under"
+        type: string
+        required: true
+      backend-artifact:
+        description: "Artifact name holding the backend image tarball"
+        type: string
+        required: true
+      frontend-artifact:
+        description: "Artifact name holding the frontend image tarball"
+        type: string
+        required: true
+      version:
+        description: "Version tag to publish (e.g. 1.0.3)"
+        type: string
+        required: true
+      run-id:
+        description: "Workflow run ID that produced the artifacts (for cross-run download)"
+        type: string
+        required: false
+        default: ""
+    secrets:
+      dockerhub-token:
+        description: "Docker Hub access token or password"
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download backend image
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.backend-artifact }}
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.run-id != '' && inputs.run-id || github.run_id }}
+
+      - name: Download frontend image
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.frontend-artifact }}
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.run-id != '' && inputs.run-id || github.run_id }}
+
+      - name: Load images
+        run: |
+          docker load -i backend-image.tar
+          docker load -i frontend-image.tar
+
+      - name: Log in to Docker Hub
+        run: |
+          echo "${{ secrets.dockerhub-token }}" \
+            | docker login -u "${{ inputs.dockerhub-username }}" --password-stdin
+
+      - name: Tag and push backend
+        run: |
+          src=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^fortuna-backend:' | head -n1)
+          docker tag "$src" "${{ inputs.dockerhub-username }}/fortuna-backend:${{ inputs.version }}"
+          docker tag "$src" "${{ inputs.dockerhub-username }}/fortuna-backend:latest"
+          docker push "${{ inputs.dockerhub-username }}/fortuna-backend:${{ inputs.version }}"
+          docker push "${{ inputs.dockerhub-username }}/fortuna-backend:latest"
+
+      - name: Tag and push frontend
+        run: |
+          src=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^fortuna-frontend:' | head -n1)
+          docker tag "$src" "${{ inputs.dockerhub-username }}/fortuna-frontend:${{ inputs.version }}"
+          docker tag "$src" "${{ inputs.dockerhub-username }}/fortuna-frontend:latest"
+          docker push "${{ inputs.dockerhub-username }}/fortuna-frontend:${{ inputs.version }}"
+          docker push "${{ inputs.dockerhub-username }}/fortuna-frontend:latest"

@@ -1,0 +1,16 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    uses: ./.github/workflows/components.publish-dockerhub.yml
+    with:
+      dockerhub-username: lilybw
+      backend-artifact:  image-backend-ci-${{ github.sha }}
+      frontend-artifact: image-frontend-ci-${{ github.sha }}
+      version:           ${{ github.event.release.tag_name }}
+    secrets:
+      dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
