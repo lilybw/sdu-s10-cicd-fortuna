@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cookie-serve
+  labels:
+    app: cookie-serve
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cookie-serve
+  template:
+    metadata:
+      labels:
+        app: cookie-serve
+    spec:
+      containers:
+        - name: cookie-serve
+          image: lilybw/sdu-s10-cicd-fortuna:backend-latest
+          ports:
+            - containerPort:8080
