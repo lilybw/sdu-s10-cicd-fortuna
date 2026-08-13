@@ -44,6 +44,7 @@ jobs:
       dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
 
   rollout:
+    needs: [publish]
     uses: ./.github/workflows/components.rollout.yml
     with:
       manifest-path: deployment/kubernetes
