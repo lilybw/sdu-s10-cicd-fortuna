@@ -1,0 +1,68 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      image-tag:
+        description: "Tag applied to built images"
+        type: string
+        required: false
+        default: ci-${{ github.sha }}
+    outputs:
+      backend-image:
+        description: "Image ref (repo:tag) for the backend"
+        value: ${{ jobs.build.outputs.backend-image }}
+      frontend-image:
+        description: "Image ref (repo:tag) for the frontend"
+        value: ${{ jobs.build.outputs.frontend-image }}
+      backend-artifact:
+        description: "Artifact name holding the backend image tarball"
+        value: ${{ jobs.build.outputs.backend-artifact }}
+      frontend-artifact:
+        description: "Artifact name holding the frontend image tarball"
+        value: ${{ jobs.build.outputs.frontend-artifact }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      backend-image: ${{ steps.meta.outputs.backend-image }}
+      frontend-image: ${{ steps.meta.outputs.frontend-image }}
+      backend-artifact: ${{ steps.meta.outputs.backend-artifact }}
+      frontend-artifact: ${{ steps.meta.outputs.frontend-artifact }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute image refs and artifact names
+        id: meta
+        run: |
+          tag='${{ inputs.image-tag }}'
+          echo "backend-image=fortuna-backend:${tag}"   >> "$GITHUB_OUTPUT"
+          echo "frontend-image=fortuna-frontend:${tag}" >> "$GITHUB_OUTPUT"
+          echo "backend-artifact=image-backend-${tag}"   >> "$GITHUB_OUTPUT"
+          echo "frontend-artifact=image-frontend-${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Build backend image
+        run: docker build -t ${{ steps.meta.outputs.backend-image }} ./backend
+
+      - name: Build frontend image
+        run: docker build -t ${{ steps.meta.outputs.frontend-image }} ./frontend
+
+      - name: Save images to tarballs
+        run: |
+          docker save ${{ steps.meta.outputs.backend-image }}  -o backend-image.tar
+          docker save ${{ steps.meta.outputs.frontend-image }} -o frontend-image.tar
+
+      - name: Upload backend image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.backend-artifact }}
+          path: backend-image.tar
+          retention-days: 1
+
+      - name: Upload frontend image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.frontend-artifact }}
+          path: frontend-image.tar
+          retention-days: 1

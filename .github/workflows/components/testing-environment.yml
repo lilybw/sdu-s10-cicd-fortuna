@@ -4,25 +4,57 @@ on:
   workflow_call:
     inputs:
       compose-path:
-        description: "Directory containing the docker-compose file"
         type: string
         required: false
         default: testing
       frontend-url:
-        description: "Base URL the runner uses to reach the frontend"
         type: string
         required: false
         default: http://localhost:8080
+      backend-image:
+        description: "Prebuilt backend image ref to run"
+        type: string
+        required: true
+      frontend-image:
+        description: "Prebuilt frontend image ref to run"
+        type: string
+        required: true
+      backend-artifact:
+        description: "Artifact name holding the backend image tarball"
+        type: string
+        required: true
+      frontend-artifact:
+        description: "Artifact name holding the frontend image tarball"
+        type: string
+        required: true
 
 jobs:
   integration:
     runs-on: ubuntu-latest
+    env:
+      BACKEND_IMAGE: ${{ inputs.backend-image }}
+      FRONTEND_IMAGE: ${{ inputs.frontend-image }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build and start the stack
+      - name: Download backend image
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.backend-artifact }}
+
+      - name: Download frontend image
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.frontend-artifact }}
+
+      - name: Load images
+        run: |
+          docker load -i backend-image.tar
+          docker load -i frontend-image.tar
+
+      - name: Start the stack
         working-directory: ${{ inputs.compose-path }}
-        run: docker compose up -d --build
+        run: docker compose up -d   # no --build; images are preloaded
 
       - name: Wait for frontend health
         run: |
