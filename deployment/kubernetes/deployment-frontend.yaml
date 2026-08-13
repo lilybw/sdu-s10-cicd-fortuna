@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cookie-serve-frontend
+  labels:
+    app: cookie-serve-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cookie-serve-frontend
+  template:
+    metadata:
+      labels:
+        app: cookie-serve-frontend
+    spec:
+      containers:
+        - name: cookie-serve-frontend
+          image: lilybw/sdu-s10-cicd-fortuna:frontend-latest
+          ports:
+            - containerPort: 8080
