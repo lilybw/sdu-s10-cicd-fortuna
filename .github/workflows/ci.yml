@@ -31,3 +31,14 @@ jobs:
     with:
       backend-artifact: ${{ needs.build.outputs.backend-artifact }}
       frontend-artifact: ${{ needs.build.outputs.frontend-artifact }}
+
+  publish:
+    needs: [build, test-environment]
+    uses: ./.github/workflows/components.publish-dockerhub.yml
+    with:
+      dockerhub-username: lilybw
+      backend-artifact:  image-backend-ci-${{ github.sha }}
+      frontend-artifact: image-frontend-ci-${{ github.sha }}
+      version:           ${{ github.event.release.tag_name }}
+    secrets:
+      dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
