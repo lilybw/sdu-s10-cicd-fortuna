@@ -1,0 +1,32 @@
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    environment:
+      REDIS_DNS: redis
+    depends_on:
+      redis:
+        condition: service_healthy
+    expose:
+      - "9000"
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    environment:
+      BACKEND_DNS: backend
+      BACKEND_PORT: "9000"
+    depends_on:
+      - backend
+    ports:
+      - "8080:8080"

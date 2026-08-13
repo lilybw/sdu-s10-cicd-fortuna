@@ -1,0 +1,28 @@
+name: Unit Tests
+
+on:
+  workflow_call:
+    inputs:
+      services:
+        description: "JSON array of service dirs that have Go tests"
+        type: string
+        required: false
+        default: '["frontend"]'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJSON(inputs.services) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: ${{ matrix.service }}/go.sum
+      - run: go vet ./...
+      - run: go test -v ./...

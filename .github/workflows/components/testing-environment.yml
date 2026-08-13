@@ -1,0 +1,67 @@
+name: Test Environment
+
+on:
+  workflow_call:
+    inputs:
+      compose-path:
+        description: "Directory containing the docker-compose file"
+        type: string
+        required: false
+        default: testing
+      frontend-url:
+        description: "Base URL the runner uses to reach the frontend"
+        type: string
+        required: false
+        default: http://localhost:8080
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start the stack
+        working-directory: ${{ inputs.compose-path }}
+        run: docker compose up -d --build
+
+      - name: Wait for frontend health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS ${{ inputs.frontend-url }}/healthz | grep -q healthy; then
+              echo "frontend is healthy"; exit 0
+            fi
+            echo "waiting for frontend... ($i)"; sleep 2
+          done
+          echo "frontend never became healthy"; exit 1
+
+      - name: Smoke test - random fortune
+        run: |
+          body=$(curl -fsS ${{ inputs.frontend-url }}/api/random)
+          echo "random -> $body"
+          test -n "$body"
+
+      - name: Smoke test - list all fortunes
+        run: |
+          curl -fsS ${{ inputs.frontend-url }}/api/all | grep -q "fortune" \
+            || (echo "no fortunes rendered"; exit 1)
+
+      - name: Smoke test - add a fortune
+        run: |
+          curl -fsS -X POST ${{ inputs.frontend-url }}/api/add \
+            -H 'Content-type: application/json' \
+            -d '{"message":"CI was here"}' | grep -q "Cookie added"
+
+      - name: Verify added fortune persisted
+        run: |
+          curl -fsS ${{ inputs.frontend-url }}/api/all | grep -q "CI was here" \
+            || (echo "added fortune not found"; exit 1)
+
+      - name: Dump logs on failure
+        if: failure()
+        working-directory: ${{ inputs.compose-path }}
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        working-directory: ${{ inputs.compose-path }}
+        run: docker compose down -v

@@ -1,0 +1,14 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  unit-tests:
+    uses: ./.github/workflows/components/unit-tests.yml
+
+  test-environment:
+    needs: unit-tests
+    uses: ./.github/workflows/components/test-environment.yml
