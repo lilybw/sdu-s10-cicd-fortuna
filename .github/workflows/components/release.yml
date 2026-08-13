@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      backend-artifact:
+        description: "Artifact name holding the backend image tarball"
+        type: string
+        required: true
+      frontend-artifact:
+        description: "Artifact name holding the frontend image tarball"
+        type: string
+        required: true
+    outputs:
+      version:
+        description: "The version tag that was released"
+        value: ${{ jobs.release.outputs.version }}
+
+permissions:
+  contents: write   # required to create tags and releases
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute next version (m.k.n+1)
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')
+          if [ -z "$latest" ]; then
+            echo "no previous release, starting from 0.0.0"
+            m=0; k=0; n=0
+          else
+            echo "previous release: $latest"
+            ver="${latest#v}"                 # strip optional leading v
+            m="${ver%%.*}"; rest="${ver#*.}"
+            k="${rest%%.*}"; n="${rest#*.}"
+          fi
+          next="${m}.${k}.$((n + 1))"
+          echo "next version: $next"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Download backend image
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.backend-artifact }}
+
+      - name: Download frontend image
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.frontend-artifact }}
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.version }}" \
+            --title "Release ${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            backend-image.tar frontend-image.tar

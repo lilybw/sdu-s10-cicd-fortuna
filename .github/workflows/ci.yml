@@ -6,16 +6,23 @@ on:
 
 jobs:
   unit-tests:
-    uses: ./.github/workflows/unit-tests.yml
+    uses: ./.github/workflows/components/unit-testing.yml
 
   build:
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/components/build.yml
 
   test-environment:
     needs: [unit-tests, build]
-    uses: ./.github/workflows/test-environment.yml
+    uses: ./.github/workflows/components/testing-environment.yml
     with:
       backend-image:     ${{ needs.build.outputs.backend-image }}
       frontend-image:    ${{ needs.build.outputs.frontend-image }}
+      backend-artifact:  ${{ needs.build.outputs.backend-artifact }}
+      frontend-artifact: ${{ needs.build.outputs.frontend-artifact }}
+
+  release:
+    needs: [build, test-environment]
+    uses: ./.github/workflows/components/release.yml
+    with:
       backend-artifact:  ${{ needs.build.outputs.backend-artifact }}
       frontend-artifact: ${{ needs.build.outputs.frontend-artifact }}
