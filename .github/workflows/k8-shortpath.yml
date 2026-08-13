@@ -1,0 +1,28 @@
+name: CI
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [kubernetes]
+  pull_request:
+    branches: [kubernetes]
+
+jobs:
+  rollout:
+    uses: ./.github/workflows/components.rollout.yml
+    with:
+      manifest-path: deployment/kubernetes
+      frontend-service: frontend
+    secrets:
+      kubeconfig: ${{ secrets.KUBECONFIG }}
+
+  report:
+    needs: rollout
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Frontend is live at: ${{ needs.rollout.outputs.frontend-url }}"
+          echo "## Deployed frontend" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ needs.rollout.outputs.frontend-url }}" >> "$GITHUB_STEP_SUMMARY"
