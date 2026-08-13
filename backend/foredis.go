@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"log"
+	"os"
 	"sync"
 	"time"
-	"os"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 var dbLink redis.Conn
@@ -37,6 +38,16 @@ func init() {
 	resKeys, err := redis.Values(dbLink.Do("hkeys", "fortunes"))
 	if err != nil {
 		fmt.Println("redis hkeys failed", err.Error())
+		return
+	}
+
+	// Only replace the in-memory fortunes with what's in Redis if Redis
+	// actually HAS fortunes stored. A fresh Redis instance with nothing
+	// in it should not wipe out the built-in default fortunes (or
+	// anything already loaded from SQLite) - it should just leave them
+	// alone until something gets added.
+	if len(resKeys) == 0 {
+		fmt.Println("redis has no fortunes yet, keeping existing fortunes")
 		return
 	}
 

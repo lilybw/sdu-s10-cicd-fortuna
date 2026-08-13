@@ -9,6 +9,7 @@ FROM alpine:3.20
 RUN adduser -D -u 10001 appuser
 WORKDIR /app
 COPY --from=build /app/server .
+COPY --from=build /src/seed.sql .
 USER appuser
 EXPOSE 9000
 ENTRYPOINT ["/app/server"]
