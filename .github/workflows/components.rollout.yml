@@ -1,0 +1,106 @@
+name: Rollout to Kubernetes
+
+on:
+  workflow_call:
+    inputs:
+      manifest-path:
+        description: "Directory containing the Kubernetes manifests"
+        type: string
+        required: false
+        default: deployment/kubernetes
+      environment:
+        description: "Target environment label"
+        type: string
+        required: false
+        default: production
+      frontend-service:
+        description: "Name of the frontend Service to read access info from"
+        type: string
+        required: false
+        default: frontend
+    secrets:
+      kubeconfig:
+        description: "Base64-encoded kubeconfig (the KUBECONFIG repo secret)"
+        required: true
+    outputs:
+      frontend-url:
+        description: "Reachable URL(s) for the deployed frontend"
+        value: ${{ jobs.rollout.outputs.frontend-url }}
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend-url: ${{ steps.access.outputs.frontend-url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Persist kubeconfig to disk
+        run: echo "${{ secrets.kubeconfig }}" | base64 -d > kubeconfig
+
+      - name: Apply manifests
+        run: kubectl --kubeconfig kubeconfig apply -f "${{ inputs.manifest-path }}"
+
+      - name: Wait for frontend rollout
+        run: |
+          kubectl --kubeconfig kubeconfig rollout status \
+            deployment/${{ inputs.frontend-service }} --timeout=120s || true
+
+      - name: Resolve frontend access info
+        id: access
+        run: |
+          KC="--kubeconfig kubeconfig"
+          SVC="${{ inputs.frontend-service }}"
+
+          svc_type=$(kubectl $KC get svc "$SVC" -o jsonpath='{.spec.type}')
+          echo "Service type: $svc_type"
+
+          urls=""
+
+          if [ "$svc_type" = "LoadBalancer" ]; then
+            # external IP or hostname assigned by the cloud/loadbalancer
+            lb_ip=$(kubectl $KC get svc "$SVC" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+            lb_host=$(kubectl $KC get svc "$SVC" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+            port=$(kubectl $KC get svc "$SVC" -o jsonpath='{.spec.ports[0].port}')
+            addr="${lb_ip}${lb_host}"
+            urls="http://${addr}:${port}"
+
+          elif [ "$svc_type" = "NodePort" ]; then
+            node_port=$(kubectl $KC get svc "$SVC" -o jsonpath='{.spec.ports[0].nodePort}')
+            # collect every node's external (or internal) IP
+            ips=$(kubectl $KC get nodes \
+              -o jsonpath='{range .items[*]}{.status.addresses[?(@.type=="ExternalIP")].address} {end}')
+            if [ -z "$(echo $ips | tr -d ' ')" ]; then
+              ips=$(kubectl $KC get nodes \
+                -o jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address} {end}')
+            fi
+            for ip in $ips; do
+              urls="${urls} http://${ip}:${node_port}"
+            done
+
+          else
+            urls="ClusterIP service '$SVC' has no external address (internal only)"
+          fi
+
+          urls=$(echo $urls | xargs)   # trim
+          echo "Resolved: $urls"
+
+          # route back as a step output
+          echo "frontend-url=$urls" >> "$GITHUB_OUTPUT"
+
+          # render into the run's job summary panel
+          {
+            echo "## Frontend access"
+            echo ""
+            echo "**Environment:** ${{ inputs.environment }}"
+            echo "**Service type:** $svc_type"
+            echo ""
+            if [ "$svc_type" = "ClusterIP" ]; then
+              echo "$urls"
+            else
+              for u in $urls; do echo "- <$u>"; done
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
