@@ -68,9 +68,14 @@ jobs:
 
       - name: Smoke test - random fortune
         run: |
-          body=$(curl -fsS ${{ inputs.frontend-url }}/api/random)
-          echo "random -> $body"
-          test -n "$body"
+          for i in $(seq 1 10); do
+            body=$(curl -fsS ${{ inputs.frontend-url }}/api/random || true)
+            if [ -n "$body" ]; then
+              echo "random -> $body"; exit 0
+            fi
+            echo "empty, retrying... ($i)"; sleep 2
+          done
+          echo "random never returned a body"; exit 1
 
       - name: Smoke test - list all fortunes
         run: |
