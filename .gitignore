@@ -6,3 +6,9 @@ frontend/frontend
 
 rasterize.ps1
 *.rasterized.txt
+
+#ignore all exe files
+*.exe
+
+# Ignore all db files
+*.db

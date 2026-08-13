@@ -143,6 +143,13 @@ func (h *fortuneHandler) Create(w http.ResponseWriter, r *http.Request) {
 	h.store.m[u.ID] = u
 	h.store.Unlock()
 
+	err := saveFortune(u)
+	if err != nil {
+		fmt.Println("Failed to save fortune:", err)
+		internalServerError(w, r)
+		return
+	}
+
 	if usingRedis {
 		_, err := dbLink.Do("hset", "fortunes", u.ID, u.Message)
 		if err != nil {
@@ -170,6 +177,7 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	openDatabase()
 	mux := http.NewServeMux()
 	fortuneH := &fortuneHandler{
 		store: &datastoreDefault,
@@ -178,5 +186,5 @@ func main() {
 	mux.Handle("/fortunes/", fortuneH)
 
 	err := http.ListenAndServe(":9000", mux)
-    fmt.Println("%v", err)
+	fmt.Printf("%v", err)
 }
