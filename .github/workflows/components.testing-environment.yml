@@ -54,7 +54,7 @@ jobs:
 
       - name: Start the stack
         working-directory: ${{ inputs.compose-path }}
-        run: docker compose up -d   # no --build; images are preloaded
+        run: docker compose up -d # no --build; images are preloaded
 
       - name: Wait for frontend health
         run: |
@@ -79,7 +79,7 @@ jobs:
 
       - name: Smoke test - list all fortunes
         run: |
-          curl -fsS ${{ inputs.frontend-url }}/api/all | grep -q "fortune" \
+          curl -fsS ${{ inputs.frontend-url }}/api/all | grep -q "<p>" \
             || (echo "no fortunes rendered"; exit 1)
 
       - name: Smoke test - add a fortune
