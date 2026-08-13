@@ -1,13 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: cookie-serve-service
+  name: cookie-serve-backend
+  namespace: student-12
   labels:
-    app: cookie-serve
+    app: cookie-serve-backend
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
-    app: cookie-serve
+    app: cookie-serve-backend
   ports:
     - protocol: TCP
       port: 9000

@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cookie-serve-backend
+  namespace: student-12
   labels:
     app: cookie-serve-backend
 spec:
@@ -18,4 +19,4 @@ spec:
         - name: cookie-serve-backend
           image: lilybw/sdu-s10-cicd-fortuna:backend-latest
           ports:
-            - containerPort: 8080
+            - containerPort: 9000
